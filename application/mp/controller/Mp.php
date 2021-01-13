@@ -1904,5 +1904,52 @@ class Mp extends Base
         }
     }
 
+    /**
+     * 数据导出为.xls格式
+     * @param string $fileName 导出的文件名
+     * @param $expCellName     array -> 数据库字段以及字段的注释
+     * @param $expTableData    Model -> 连接的数据库
+     */
+    public function exportExcel($fileName='自动回复统计'){
+        $expCellName = array(
+            array('reply_num','自动回复次数'),
+            array('keyword','触发关键词'),
+            array('type','回复类型'),
+            array('content','回复内容'),
+            array('url','回复图片链接')
+        );
+        $expTableData  = Db::query("SELECT COUNT(*) reply_num,r.keyword,p.content,r.type,p.url FROM `rh_mp_rule` `r` INNER JOIN `rh_mp_reply` `p` ON `p`.`reply_id`=`r`.`reply_id` RIGHT JOIN  rh_mp_msg m ON p.reply_id =m.reply_id WHERE  `r`.`mpid` = '2'   AND m.is_reply=2 GROUP BY m.reply_id ORDER BY reply_num DESC");
 
+        $xlsTitle = iconv('utf-8', 'gb2312', $fileName);//文件名称
+        $xlsName = $fileName.date("_Y-m-d"); //or $xlsTitle 文件名称可根据自己情况设定
+        $cellNum = count($expCellName);
+        $dataNum = count($expTableData);
+
+        include_once EXTEND_PATH . 'PHPExcel/Classes/PHPExcel.php';
+
+        $objPHPExcel = new \PHPExcel();
+        $cellName = array('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC','AD','AE','AF','AG','AH','AI','AJ','AK','AL','AM','AN','AO','AP','AQ','AR','AS','AT','AU','AV','AW','AX','AY','AZ');
+
+        $objPHPExcel->getDefaultStyle()->getAlignment()->setHorizontal(\PHPExcel_Style_Alignment::HORIZONTAL_CENTER);
+        $objPHPExcel->getActiveSheet(0)->mergeCells('A1:'.$cellName[$cellNum-1].'1');//合并单元格
+        $objPHPExcel->setActiveSheetIndex(0)->setCellValue('A1', $fileName.'  导出时间:'.date('Y-m-d H:i:s'))->getStyle('A1')->getFont()->setBold(true);
+        for($i=0;$i<$cellNum;$i++){
+            $objPHPExcel->setActiveSheetIndex(0)->setCellValue($cellName[$i].'2', $expCellName[$i][1]);
+            $objPHPExcel->getActiveSheet(0)->getColumnDimension($cellName[$i])->setWidth(15);
+        }
+        $objPHPExcel->getActiveSheet(0)->getColumnDimension('E')->setWidth(60);
+        // Miscellaneous glyphs, UTF-8
+        for($i=0;$i<$dataNum;$i++){
+            for($j=0;$j<$cellNum;$j++){
+                $objPHPExcel->getActiveSheet(0)->setCellValue($cellName[$j].($i+3), $expTableData[$i][$expCellName[$j][0]]);
+            }
+        }
+
+        header('pragma:public');
+        header('Content-type:application/vnd.ms-excel;charset=utf-8;name="'.$xlsTitle.'.xls"');
+        header("Content-Disposition:attachment;filename=$xlsName.xls");//attachment新窗口打印inline本窗口打印
+        $objWriter = \PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+        $objWriter->save('php://output');
+        exit;
+    }
 }
