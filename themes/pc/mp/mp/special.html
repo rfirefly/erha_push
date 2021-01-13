@@ -433,6 +433,45 @@
     </div>
 
     <div class="layui-form-item">
+        <label class="layui-form-label">转人工</label>
+        <div id="replyType_customer" class="layui-input-block">
+            <input type="radio"  {eq name="$customer['event']" value="nocol"} checked {/eq} name="customer" value="nocol" title="不处理">
+            <input type="radio" {notempty name="$customer['keyword']"} checked {/notempty} name="customer" value="keyword" title="跳转关键词" >
+        </div>
+    </div>
+    <div id="tapNodecustomer">
+        <div class="layui-tab-content customer">
+            <div class=" image_text layui-tab-item {eq name="$customer['event']" value="nocol"} layui-show {/eq}">
+            <div class="layui-form-item layui-form-text">
+            </div>
+        </div>
+        <div class="customer_keyword layui-tab-item {notempty name="$customer['keyword']"} layui-show {/notempty}">
+        <div class="layui-form-item">
+            <label class="layui-form-label"></label>
+            <div class="layui-input-block">
+                <input type="text" name="customer_keyword" value="{$customer['keyword']}" placeholder="请输入关键词" autocomplete="off" class="layui-input">
+            </div>
+        </div>
+    </div>
+<!--    <div class="view_addon layui-tab-item {notempty name="$customer['addon']"} layui-show {/notempty}">-->
+<!--    <div class="layui-form-item">-->
+<!--        <label class="layui-form-label"></label>-->
+<!--        <div class="layui-input-block">-->
+<!--            <select name="view_addons">-->
+<!--                <option value="">请选择应用</option>-->
+<!--                {volist name="addons" id="v"}-->
+<!--                <option {eq name="$customer['addon']" value="$v.addon"} selected {/eq} value="{$v.addon}">{$v.name}</option>-->
+<!--                {/volist}-->
+<!--            </select>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--    </div>-->
+    </div>
+    </div>
+
+
+
+    <div class="layui-form-item">
         <label class="layui-form-label">未被识别</label>
         <div id="replyType_unidentified" class="layui-input-block">
             <input type="radio"  {eq name="$unidentified['event']" value="nocol"} checked {/eq} name="unidentified" value="nocol" title="转客服">
@@ -536,6 +575,12 @@
             $('.view div').removeClass('layui-show')
             $('.'+class_a).addClass('layui-show')
         });
+        $("#replyType_customer").click(function(){
+            var class_a='customer_'+ $("input[name='customer']:checked").val();
+            $('.customer div').removeClass('layui-show')
+            $('.'+class_a).addClass('layui-show')
+        });
+
         $("#replyType_unidentified").click(function(){
             var class_a='unidentified_'+ $("input[name='unidentified']:checked").val();
             $('.link div').removeClass('layui-show')

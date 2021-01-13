@@ -11,12 +11,17 @@
                         </select>
                     </div>
                 </div>
-                <div class="layui-col-md5" style="margin-left: 5px; line-height: 38px;">
+                <div class="layui-col-md3" style="margin-left: 5px; line-height: 38px;">
                     <div class="layui-form-item">
                         <input name="keyword" placeholder="请输入关键词" value="{:input('keyword')}" class="layui-input" type="text">
                     </div>
                 </div>
-                <div class="layui-col-md4" style="margin-left: 5px; line-height: 38px;">
+                <div class="layui-col-md3" style="margin-left: 5px; line-height: 38px;">
+                    <div class="layui-form-item">
+                        <input name="times" id="rhaphp-time" value="{:input('times')}" class="layui-input" placeholder="开始时间 到 结束时间" type="text">
+                    </div>
+                </div>
+                <div class="layui-col-md1" style="margin-left: 5px; line-height: 38px;">
                     <button class="layui-btn layui-btn-primary" lay-submit="" lay-filter="formDemo">搜索内容</button>
                 </div>
             </form>
@@ -41,6 +46,7 @@
         <li {eq name="type" value="search"}class="layui-this"{/eq}><a>搜索全部</a></li>
         {/if}
     </ul>
+
     <div class="layui-tab-content">
 
         {switch name="type"}
@@ -49,13 +55,15 @@
             <colgroup>
                 <col width="120">
                 <col >
-                <col width="100" >
+                <col width="150" >
+                <col width="120" >
                 <col width="150">
             </colgroup>
                     <thead>
                     <tr>
                         <th>关键词</th>
                         <th>回复内容</th>
+                        <th>自动回复次数</th>
                         <th>状态</th>
                         <th>操作</th>
                     </tr>
@@ -65,6 +73,7 @@
                     <tr>
                         <td>{$vo.keyword}</td>
                         <td>{$vo.content}</td>
+                        <td>{$vo.times}</td>
                         <td>{if condition="$vo.status=='1'"}使用中{else/}已停用{/if}</td>
                         <td>
                             <div class="">
@@ -219,6 +228,7 @@
             <col width="">
             <col width="100">
             <col width="" >
+            <col width="120">
             <col width="100">
             <col width="150">
             <thead>
@@ -226,6 +236,7 @@
                 <th>关键词</th>
                 <th>类型</th>
                 <th>封面图</th>
+                <th>自动回复次数</th>
                 <th>状态</th>
                 <th>操作</th>
             </tr>
@@ -242,7 +253,7 @@
                         <img class="form_logo" src="{$vo.url}" style="max-width: none" width="120" height="60">
                     </div>
                 </td>
-
+                <td>{$vo.times}</td>
                 <td>{if condition="$vo.status=='1'"}使用中{else/}已停用{/if}</td>
                 <td>
                     <a class="rha-bt-a" href="javascript:;" onclick="editReply('{$vo.id}')">修改</a>
@@ -398,12 +409,19 @@
 <script>
     var layer;
     var form;
-    layui.use(['layer','form'], function() {
+    layui.use(['layer','form', 'laydate'], function() {
         layer = layui.layer;
         form = layui.form;
+        layui.laydate.render({
+            elem: '#rhaphp-time'
+            ,type: 'datetime'
+            ,range: '到'
+            ,format: 'yyyy-MM-dd HH:mm:ss'
+        });
         form.on('select(types)', function(data){
             $.post("",{search_type:data.value},function (res) {})
         });
+
     })
     function delReply(id) {
         layui.use('layer', function(){

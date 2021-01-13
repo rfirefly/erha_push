@@ -99,6 +99,10 @@ class MpMsg extends Model
                 $msgContent[$key]['nickname']=$mpInfo['name'];
                     $msgContent[$key]['headimgurl']=$mpInfo['logo'];
             }
+            if($val['is_reply']==2){
+                $msgContent[$key]['nickname']="自动回复";
+                $msgContent[$key]['headimgurl']="/uploads/robot.png";
+            }
 
         }
         return $msgContent;

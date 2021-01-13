@@ -63,7 +63,12 @@ class Entr
         $M->updateLastTime($msgData);
         switch ($msgData['MsgType']) {
             case 'text'://文本消息
-                $this->keyword($msgData['Content'], $msgData);
+                $rule_customer = Db::name('mp_rule')->where(['mpid' => $this->mid, 'event' => 'customer', 'status' => '1'])->find();
+                if ($rule_customer['keyword'] == $msgData['Content']) {
+                    $this->mpMsg($msgData);
+                }else{
+                    $this->keyword($msgData['Content'], $msgData);
+                }
                 break;
             case 'image'://图片消息
                 $this->special('image', $msgData);
@@ -223,6 +228,49 @@ class Entr
     }
 
     /**
+     * 消息储存
+     * @author ff
+     * @param $msgData
+     */
+    public function saveMsg($msgData)
+    {
+        $msg['mpid'] = $this->mid;
+        $msg['openid'] = $msgData['FromUserName'];
+        $msg['type'] = $msgData['MsgType'];
+        $msg['create_time'] = time();
+        $model = new MpMsg();
+        switch ($msgData['MsgType']) {
+            case 'text'://文本消息
+                $msg['content'] = $msgData['Content'];
+                $model->save($msg);
+                break;
+            case 'image'://图片消息
+                $msg['content'] = getHostDomain() . '/mp/Show/image?url=' . urlencode($msgData['PicUrl']);
+
+                $model->save($msg);
+                break;
+            case 'voice'://语音消息
+                $msg['content'] = $msgData['MediaId'];
+                $model->save($msg);
+                break;
+            case 'video'://视频消息
+                $msg['content'] = $msgData['MediaId'];
+                $model->save($msg);
+                break;
+            case 'shortvideo'://小视频消息
+
+                break;
+            case 'location'://地理位置消息
+                $msg['content'] = $msgData['Label'];
+                $model->save($msg);
+                break;
+            case 'link'://链接消息
+
+                break;
+        }
+    }
+
+    /**
      * 处理特殊事件
      * @author geeson 314835050@qq.com
      * $type 事件类型
@@ -230,8 +278,7 @@ class Entr
      */
     public function special($type, $msgData)
     {
-        $rule = Db::name('mp_rule')
-            ->where(['mpid' => $this->mid, 'event' => $type, 'status' => '1'])->find();
+        $rule = Db::name('mp_rule')->where(['mpid' => $this->mid, 'event' => $type, 'status' => '1'])->find();
         if (!empty($rule)) {
             if ($rule['keyword']) {
                 $this->keyword($rule['keyword'], $msgData);
@@ -240,8 +287,7 @@ class Entr
                 loadAdApi($rule['addon'], $msgData, ['mid' => $this->mid, 'addon' => $rule['addon']]);
             }
         } else {//不存在响应处理
-            $rule = Db::name('mp_rule')
-                ->where(['mpid' => $this->mid, 'event' => 'unidentified', 'status' => '1'])->find();
+            $rule = Db::name('mp_rule')->where(['mpid' => $this->mid, 'event' => 'unidentified', 'status' => '1'])->find();
             if (!empty($rule)) {
                 if ($rule['keyword']) {
                     $this->keyword($rule['keyword'], $msgData);
@@ -252,7 +298,6 @@ class Entr
             } else {
                 $this->mpMsg($msgData);
             }
-
         }
     }
 
@@ -299,18 +344,41 @@ class Entr
         $rule = Db::name('mp_rule')->where(['mpid' => $this->mid, 'keyword' => $keyword, 'status' => '1'])
             ->where('event', '')
             ->order('id Desc')->find();
+
         if (!empty($rule)) {
             switch ($rule['type']) {//text,addon,images,news,voice,music,video
                 case 'addon'://该关键词是插件应用响应的
                     loadAdApi($rule['addon'], $msg, ['mid' => $this->mid, 'addon' => $rule['addon']]);
                     break;
                 case 'text'://文本
-                    $content = Db::name('mp_reply')->where(['reply_id' => $rule['reply_id']])->field('content')->find();
+                    $content = Db::name('mp_reply')->where(['reply_id' => $rule['reply_id']])->field(['content', 'reply_id'])->find();
+                    $model = new MpMsg();
+                    $model->save([
+                        'mpid' => $this->mid,
+                        'openid' => $msg['FromUserName'],
+                        'create_time' => time(),
+                        'type' => "text",
+                        'content' => $content['content'],
+                        'is_reply' => 2,
+                        'status' => 1,
+                        'reply_id' => $content['reply_id']
+                    ]);
                     replyText($content['content']);
                     break;
                 case 'image'://图片
                     $result = Db::name('mp_reply')->where(['reply_id' => $rule['reply_id']])->find();
                     if (!empty($result)) {
+                        $model = new MpMsg();
+                        $model->save([
+                            'mpid' => $this->mid,
+                            'openid' => $msg['FromUserName'],
+                            'create_time' => time(),
+                            'type' => "image",
+                            'content' => $result['url'],
+                            'is_reply' => 2,
+                            'status' => 1,
+                            'reply_id' => $result['reply_id']
+                        ]);
                         replyImage($result['media_id']);
                     }
                     break;
@@ -375,6 +443,7 @@ class Entr
                     //
                     break;
             }
+            $this->saveMsg($msg);
         } else {
             $rule = Db::name('mp_rule')
                 ->where(['mpid' => $this->mid, 'event' => 'unidentified', 'status' => '1'])->find();

@@ -94,23 +94,44 @@ class Mp extends Base
             $search_type = input('search_type');
             Session::set('search_type', $search_type);
         }
-        if (input('keyword')) {
+        if (input('keyword') || input('times')) {
+//            搜索全部
             if (input('search_type') == 1) {
                 $result = Db::name('mp_rule')->alias('r')
                     ->where(['r.mpid' => $this->mid])
                     ->where('r.type', 'neq', '')
                     ->where('r.keyword', 'like', '%' . input('keyword') . '%')
                     ->order('r.id DESC')
-                    ->paginate(10, false, ['query' => ['keyword' => input('keyword'), 'search_type' => input('search_type')]]);
+                    ->paginate(10, false, ['query' => ['keyword' => input('keyword'), 'search_type' => input('search_type')]])->each(function ($item){
+                        $item['times'] = Db::name('mp_msg')->where(['is_reply' => 2, 'reply_id'=>$item['reply_id']])->count();
+                        return $item;
+                    });
+
                 $this->assign('data', $result);
                 $this->assign('type', 'search');
             } else {
+                //            搜索当前
+                $where = [
+                    ['r.mpid', '=', $this->mid],
+                    ['r.type', '=', $type],
+                    ['r.keyword', 'like', '%'.input('keyword').'%']
+                ];
                 $result = Db::name('mp_rule')->alias('r')
-                    ->where(['r.mpid' => $this->mid, 'r.type' => $type])
-                    ->where('r.keyword', 'like', '%' . input('keyword') . '%')
+                    ->where($where)
                     ->join('__MP_REPLY__ p', 'p.reply_id=r.reply_id')
                     ->order('r.id DESC')
-                    ->paginate(10, false, ['query' => ['keyword' => input('keyword'), 'search_type' => input('search_type')]]);
+                    ->paginate(10, false, ['query' => ['keyword' => input('keyword'), 'search_type' => input('search_type')]])->each(function ($item){
+                        $where = [
+                            ['is_reply', '=', 2],
+                            ['reply_id', '=', $item['reply_id']]
+                        ];
+                        if(input('times')){
+                            $timeArr = explode("到",input('times'));
+                            $where[] = ['create_time', 'between', [strtotime($timeArr[0]), strtotime($timeArr[1])]];
+                        }
+                        $item['times'] = Db::name('mp_msg')->where($where)->count();
+                        return $item;
+                    });
                 $this->assign('data', $result);
                 $this->assign('type', $type);
             }
@@ -125,7 +146,17 @@ class Mp extends Base
             ->where(['r.mpid' => $this->mid, 'r.type' => $type])
             ->join('__MP_REPLY__ p', 'p.reply_id=r.reply_id')
             ->order('r.id DESC')
-            ->paginate(10);
+            ->paginate(10)->each(function ($item){
+                $where = [
+                    ['is_reply', '=', 2],
+                    ['reply_id', '=', $item['reply_id']]
+                ];
+                if(input('times')){
+                    $where[] = ['create_time', 'between', explode("到",input('times'))];
+                }
+                $item['times'] = Db::name('mp_msg')->where($where)->count();
+                return $item;
+            });
 
         $this->assign('data', $rePly);
         $this->assign('type', $type);
@@ -905,6 +936,9 @@ class Mp extends Base
                     case 'unidentified':
                         $this->doSpecial('unidentified', $td);
                         break;
+                    case 'customer':
+                        $this->doSpecial('customer', $td);
+                        break;
                     case 'card':
                         $this->doSpecial('card', $td);
                         break;
@@ -927,6 +961,7 @@ class Mp extends Base
                 '9' => 'unsubscribe',
                 '10' => 'unidentified',
                 '11' => 'card',
+                '12' => 'customer'
             ];
             foreach ($where as $key => $v) {
                 $result = Db::name('mp_rule')
